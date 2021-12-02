@@ -122,6 +122,16 @@ func (vpc *AwsVpc) processObject(bucket string, mdata *s3.Object) error {
 				return err
 			}
 		}
+
+		deleteInput := &s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    mdata.Key,
+		}
+		_, deleteErr := vpc.client.DeleteObject(deleteInput)
+		if deleteErr != nil {
+			vpc.Errorf("Cannot delete object: %s %s -> %v", bucket, *mdata.Key, deleteErr)
+			return err
+		}
 	}
 
 	if len(res) > 0 {
