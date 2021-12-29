@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
+	"flag"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -35,6 +36,10 @@ type SQSBucket struct {
 type SQSObject struct {
 	Key string `json:"key"`
 }
+
+var (
+	DeleteLogs = flag.Bool("aws_delete_logs", false, "If set, attempt to delete VPC flow logs as they are processed from the S3 bucket.")
+)
 
 func (vpc *AwsVpc) processObject(bucket string, mdata *s3.Object) error {
 	vpc.Debugf("Processing %s %s", bucket, *mdata.Key)
@@ -123,14 +128,16 @@ func (vpc *AwsVpc) processObject(bucket string, mdata *s3.Object) error {
 			}
 		}
 
-		deleteInput := &s3.DeleteObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    mdata.Key,
-		}
-		_, deleteErr := vpc.client.DeleteObject(deleteInput)
-		if deleteErr != nil {
-			vpc.Errorf("Cannot delete object: %s %s -> %v", bucket, *mdata.Key, deleteErr)
-			return err
+		if *DeleteLogs {
+			deleteInput := &s3.DeleteObjectInput{
+				Bucket: aws.String(bucket),
+				Key:    mdata.Key,
+			}
+			_, deleteErr := vpc.client.DeleteObject(deleteInput)
+			if deleteErr != nil {
+				vpc.Errorf("Cannot delete object: %s %s -> %v", bucket, *mdata.Key, deleteErr)
+				return err
+			}
 		}
 	}
 
